@@ -1,0 +1,33 @@
+# === BLOCK: .pre-commit-config.yaml (Рекомендуемая Версия) ===
+# Файл конфигурации для pre-commit хуков
+# Удалена секция black, добавлен pre-commit-hooks
+
+repos:
+# --- Стандартные хуки pre-commit (Рекомендуется) ---
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0 # Рекомендуется использовать актуальную стабильную версию
+    hooks:
+    -   id: trailing-whitespace # Удаляет лишние пробелы в конце строк
+    -   id: end-of-file-fixer # Убеждается, что файл заканчивается одной пустой строкой
+    -   id: check-yaml # Проверяет синтаксис YAML файлов
+        args: [--allow-multiple-documents]
+    -   id: check-toml # Проверяет синтаксис TOML файлов (pyproject.toml)
+    -   id: check-added-large-files # Предотвращает случайный коммит больших файлов
+    -   id: check-merge-conflict # Проверяет наличие маркеров конфликтов слияния
+
+# --- Хуки для Ruff (Линтинг и Форматирование) ---
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Используем версию Ruff из твоего предыдущего конфига
+    rev: v0.4.4
+    hooks:
+    # 1. Форматирование кода (использует настройки из pyproject.toml, заменяет black)
+    -   id: ruff-format
+        # Исключаем папки, которые не нужно форматировать, если нужно:
+        # exclude: ^(venv/|migrations/|прочие_папки/)
+    # 2. Линтинг кода (использует настройки из pyproject.toml)
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix] # Автоматически исправлять и сигнализировать об исправлениях
+        # Исключаем папки, которые не нужно проверять, если нужно:
+        # exclude: ^(venv/|migrations/|прочие_папки/)
+
+# === END BLOCK: .pre-commit-config.yaml (Рекомендуемая Версия) ===

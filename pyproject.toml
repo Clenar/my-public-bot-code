@@ -1,0 +1,42 @@
+# pyproject.toml (Полный код с игнорированием E501)
+
+[tool.black]
+line-length = 88
+# target-version = ['py39'] # Если ты используешь Black, он тоже должен знать о длине строки
+
+[tool.ruff]
+# Глобальные настройки Ruff
+line-length = 88 # Match Black's line length (оставляем, чтобы ruff format работал с этой длиной, если используется)
+# Указываем Ruff, где искать Python файлы
+# src = ["."] # Можно раскомментировать, если нужно явно указать
+# Исключаемые папки (обычно Ruff сам их определяет)
+# exclude = [".git", "__pycache__", "venv", "dist", "build"]
+
+# --- Настройки линтинга ---
+[tool.ruff.lint]
+# Выбираем наборы правил для проверки
+select = [
+    "E",  # pycodestyle errors
+    "F",  # Pyflakes
+    "W",  # pycodestyle warnings
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "SIM",# flake8-simplify
+]
+# Правила, которые нужно игнорировать
+ignore = ["E501"] # <--- ДОБАВЛЕНО ИГНОРИРОВАНИЕ E501
+
+# --- Настройки сортировки импортов (isort) ---
+[tool.ruff.lint.isort]
+known-first-party = ["handlers", "database", "utils", "ai", "keyboards", "config", "BehaviorEngine"] # Добавил BehaviorEngine, если он считается first-party
+# Обрати внимание, что в твоем предыдущем примере было "engine", но обычно это имя директории
+# Если твоя папка называется BehaviorEngine, то лучше использовать "BehaviorEngine"
+
+# --- Опционально: Настройки форматтера Ruff (если ты используешь ruff format вместо black) ---
+# [tool.ruff.format]
+# quote-style = "double"
+# indent-style = "space"
+# skip-magic-trailing-comma = false
+# line-ending = "auto"

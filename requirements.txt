@@ -1,0 +1,5 @@
+python-telegram-bot[ext]>=21.0
+asyncpg>=0.29.0
+SQLAlchemy[asyncio]
+PyYAML>=6.0
+python-dotenv>=0.19 # Используем версионирование для надежности

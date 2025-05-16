@@ -162,7 +162,7 @@ async def generate_text_response(
     Приоритет системного промпта:
     1. system_prompt_override (если передан)
     2. Форматированная инструкция из БД (если переданы instruction_key
-       и user_reply_for_format)  # Комментарий разбит для E501
+       и user_reply_for_format)
     3. Обычная инструкция из БД (если передан instruction_key)
     4. fallback_system_message
     """
@@ -185,8 +185,6 @@ async def generate_text_response(
         fetched_instruction_text: typing.Optional[str] = None
         try:
             current_session: typing.Optional[AsyncSession] = session
-            # Используем 'async with' если создаем сессию здесь,
-            # чтобы гарантировать закрытие (Комментарий разбит для E501)
             if not current_session and AsyncSessionLocal:
                 async with AsyncSessionLocal() as new_session:  # Создаем сессию
                     fetched_instruction_text = await _get_instruction_text(
@@ -204,61 +202,97 @@ async def generate_text_response(
             # Обрабатываем полученный текст
             if fetched_instruction_text:
                 if user_reply_for_format:  # 2. Если нужно форматировать
+                    # Расширенное логирование для отладки форматирования
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: About to format. Type of fetched_instruction_text: {type(fetched_instruction_text)}"
+                    )
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: Fetched instruction text (raw, len {len(fetched_instruction_text)}):\n'''{fetched_instruction_text}'''"
+                    )
+                    # Используем repr() для выявления скрытых/специальных символов
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: Representation of fetched_instruction_text:\n{repr(fetched_instruction_text)}"
+                    )
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: Type of user_reply_for_format: {type(user_reply_for_format)}"
+                    )
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: Value for user_reply_for_format: '{user_reply_for_format}'"
+                    )
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: Representation of user_reply_for_format:\n{repr(user_reply_for_format)}"
+                    )
+
+                    placeholder_name_to_check = (
+                        "user_reply"  # Имя ключа, которое мы ожидаем
+                    )
+                    is_placeholder_present_immediately_before_format = (
+                        f"{{{placeholder_name_to_check}}}" in fetched_instruction_text
+                    )
+                    logger.info(
+                        f"AI_INTERACTION_DEBUG: Is '{{{placeholder_name_to_check}}}' present in fetched_instruction_text immediately before .format()? {is_placeholder_present_immediately_before_format}"
+                    )
+
                     try:
-                        # Ищем плейсхолдер {user_reply} и подставляем значение
+                        # Попытка форматирования с явным указанием ключа как в словаре
                         final_system_prompt = fetched_instruction_text.format(
-                            user_reply=user_reply_for_format
+                            **{placeholder_name_to_check: user_reply_for_format}
                         )
-                        # Строка f-string разбита для E501
                         logger.info(
                             "Использована ФОРМАТИРОВАННАЯ инструкция "
                             f"'{instruction_key}'."
                         )
-                    except KeyError:
-                        # Строка f-string разбита для E501
+                        logger.info(
+                            f"AI_INTERACTION_DEBUG: Successfully formatted prompt:\n'''{final_system_prompt}'''"
+                        )
+                    except KeyError as e_key:
                         logger.error(
                             f"Ошибка форматирования инструкции '{instruction_key}': "
-                            f"плейсхолдер {{user_reply}} не найден? "
+                            f"плейсхолдер {{user_reply}} не найден? (KeyError: {e_key}) "
                             "Использую неформатированный текст."
+                        )
+                        logger.error(
+                            f"AI_INTERACTION_DEBUG: KeyError during format: {e_key}. Available keys in fetched_instruction_text might be different or placeholder name is subtly wrong.",
+                            exc_info=True,
                         )
                         final_system_prompt = fetched_instruction_text
                     except Exception as fmt_e:
-                        # Строка f-string разбита для E501
                         logger.error(
                             "Неизвестная ошибка форматирования инструкции "
                             f"'{instruction_key}': {fmt_e}"
                         )
+                        logger.error(
+                            f"AI_INTERACTION_DEBUG: Other error during format: {fmt_e}",
+                            exc_info=True,
+                        )
                         final_system_prompt = fetched_instruction_text
-                else:  # 3. Используем текст инструкции напрямую
+                else:  # 3. Используем текст инструкции напрямую (user_reply_for_format не передан)
                     final_system_prompt = fetched_instruction_text
-                    logger.info(f"Использована инструкция '{instruction_key}' из БД.")
+                    logger.info(
+                        f"Использована инструкция '{instruction_key}' из БД (без форматирования user_reply)."
+                    )  # Уточнено сообщение
             else:
                 # Инструкция не найдена в БД
-                # Строка f-string разбита для E501
                 logger.warning(
                     f"Инструкция '{instruction_key}' не найдена в БД. "
                     "Используем fallback."
                 )
-                final_system_prompt = fallback_system_message  # 4. Используем fallback
+                final_system_prompt = fallback_system_message
         except Exception as e:
-            # Строка f-string разбита для E501
             logger.error(
                 "Ошибка при получении/форматировании инструкции "
                 f"'{instruction_key}': {e}",
                 exc_info=True,
             )
-            final_system_prompt = (
-                fallback_system_message  # 4. Fallback при любой ошибке
-            )
+            final_system_prompt = fallback_system_message
     else:
         # Если ключ не передан или сессия недоступна
         if instruction_key and not session_provided_or_global_exists:
-            # Строка f-string разбита для E501
             logger.error(
                 f"instruction_key '{instruction_key}' передан, "
                 "но нет сессии для его загрузки."
             )
-        final_system_prompt = fallback_system_message  # 4. Используем fallback
+        final_system_prompt = fallback_system_message
         if final_system_prompt:
             logger.debug("Использован fallback_system_message.")
         else:
@@ -335,7 +369,6 @@ async def generate_text_response(
             (m["content"] for m in reversed(messages) if m["role"] == "user"),
             "Нет сообщения",
         )
-        # Строка f-string разбита для E501
         return (
             f"[ЗАГЛУШКА GEMINI] Промпт: {str(final_system_prompt)[:50]}..., "
             f"Посл. польз.: {last_user_msg}"
@@ -347,7 +380,6 @@ async def generate_text_response(
             (m["content"] for m in reversed(messages) if m["role"] == "user"),
             "Нет сообщения",
         )
-        # Строка f-string разбита для E501
         return (
             f"[ЗАГЛУШКА VERTEXAI] Промпт: {str(final_system_prompt)[:50]}..., "
             f"Посл. польз.: {last_user_msg}"
